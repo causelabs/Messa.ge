@@ -1,0 +1,174 @@
+<!doctype html>
+<html lang="en" ng-app="myApp">
+<head>
+  <meta charset="utf-8">
+  <title>Messa.ge</title>
+  <link rel="stylesheet" href="/css/bootstrap.min.css" >
+  <link rel="stylesheet" href="/css/plugins.css"/>
+  <link rel="stylesheet" href="/css/app.css"/>
+</head>
+<body class="ng-cloak" ng-controller="App.Controllers.Controller">
+  <div class="container">
+        <h1 class="logo">Messa.ge</h1>
+    <div>
+   <div class="survey-type" ng-hide="survey.sent">
+    <h2>Choose the type of questionaire to conduct</h2>
+    <select name="survey.type" ng-model="survey.type">
+      <option value="">-- Choose One--</option>
+      <option value="survey">Take a poll</option>
+      <option value="vote">Majority rule</option>
+      <option value="calendar">Schedule a date</option>
+      <option value="">Anonymous survey</option>
+      <option value="">Schedule a date</option>
+      <option value="">Event RSVP</option>
+      <option value="">Fill a shift</option>
+      <option value="">Trivia Game</option>
+      <option value="">Customize your own</option>
+    </select>
+  </div>
+  <div class="survey-options" ng-show="survey.type">
+  <div ng-hide="survey.sent">
+  <h2>About <span ng-hide="survey.surveyor">You</span>{{survey.surveyor}}</h2>
+      <form novalidate onsubmit="return false;" class="well form-inline" name="surveyorForm" id="surveyorForm" ng-hide="survey.sent">
+        <input type="text" placeholder="Your name" required name="surveyor" ng-model="survey.surveyor" >
+      </form>
+  </div>
+
+
+      <div class="survey-question" ng-show="survey.surveyor">
+        <h2>Question <span class="" style="font-size: 12px;">that will be sent to participants</span></h2>
+      <form novalidate onsubmit="return false;" class="well form-inline" name="questionForm" id="questionForm">
+        <h3 ng-show="isOverCharCount()" class="alert alert-error">Your message is a bit too long for a text, please shorten.</h3>
+        <h3 class="surveyor-name"><span ng-hide="survey.surveyor">You</span>{{survey.surveyor}} wants to know.</h3>
+      <input type="text" ng-hide="survey.sent" placeholder="What is your question" name="question" ng-model="survey.question" class="span6" required >?
+      <span ng-show="survey.sent" class="uneditable-input">{{survey.question}}</span>
+      <ol>
+        <li ng-repeat="option in survey.questionOptions">
+        <span ng-show="survey.sent" class="uneditable-input">{{option.value}}</span>
+        <div ng-show="survey.sent" class="progress">
+        <div class="bar" ng-style="questionOptionStyle(option)">{{option.tally}} <ng-pluralize count="option.tally" when="{0:'', 'one': 'Vote', 'other': 'Votes'}"></ng-pluralize> {{option.tally / survey.participants.length * 100}}%</div>
+        </div>
+        <div ng-hide="survey.sent">
+          <input type="text" placeholder="Enter an option" name="option" ng-model="option.value" required ><button class="btn" ng-click="removeOption(option)"><i class="icon-remove"></i></button>
+        </div>
+        </li>
+      </ol>
+      <button ng-click="addOption()" ng-show="(survey.questionOptions.length < 4) && (survey.sent == false)" class="btn btn-info">Add Option</button>
+      <div>Characters: {{characterCount()}} of 100 limit</div>
+
+    </form>
+
+<div ng-show="survey.question">
+    <h2>Requirements</h2>
+    <form novalidate class="well form-horizontal" onsubmit="return false;">
+      <div class="control-group" ng-show="survey.type == 'vote'">
+        <label class="control-label" for="consensus">Consensus</label>
+          <div class="controls">
+          <select name="consensus" ng-model="survey.consensus" id="consensus" ng-hide="survey.sent">
+        <option value="10">10%</option>
+        <option value="20">20%</option>
+        <option value="30">30%</option>
+        <option value="40">40%</option>
+        <option value="50">50%</option>
+        <option value="60">60%</option>
+        <option value="70">70%</option>
+        <option value="80">80%</option>
+      </select>
+      <span class="uneditable-input" ng-show="survey.sent">{{survey.consensus}}%</span>
+    </div>
+  </div>
+  <div class="control-group" ng-show="survey.type == 'survey'">
+    <label class="control-label" for="minResponse">Mininum Respondents</label>
+    <div class="controls">
+      <select name="minResponse" ng-model="survey.minResponse" ng-hide="survey.sent">
+        <option value="10">10%</option>
+        <option value="20">20%</option>
+        <option value="30">30%</option>
+        <option value="40">40%</option>
+        <option value="50">50%</option>
+        <option value="60">60%</option>
+        <option value="70">70%</option>
+        <option value="80">80%</option>
+        <option value="90">90%</option>
+        <option value="100">100%</option>
+      </select>      
+      <span class="uneditable-input" ng-show="survey.sent">{{survey.minResponse}}%</span>
+    </div>
+  </div>
+  <div class="control-group">
+    <label class="control-label" for="expiration">Expiration Date</label>
+    <div class="date controls" id="dp3" data-date="{{survey.expiration | date:'MM-dd-yyyy'}}" data-date-format="mm-dd-yyyy">
+      <input class="datepicker" size="16" type="text" value="{{survey.expiration | date:'MM-dd-yyyy'}}" readonly="">
+      <button class="btn add-on" ng-hide="survey.sent"><i class="icon-calendar"></i></button>
+    </div>
+  </div>
+    </form>
+
+</div>
+
+
+
+</div>
+<div ng-show="survey.question && survey.questionOptions.length > 1">
+    <h2>Participants</h2>
+  <form novalidate id="participantForm" ng-submit="addParticipant()" class="well form-inline" name="participantForm">
+  <ol id="emails-section" ng-show="survey.participants.length">
+        <li ng-repeat="participant in survey.participants">
+          <div class="input" ng-hide="survey.sent">
+            <input type="text" ng-model="participant.mobile" placeholder="Enter a number 2225551212" ngattern="telephone" ng-minlength="10" ng-maxlength="10" required maxlength="10" />
+            <input type="text" ng-model="participant.name" placeholder="Enter a name (optional)" />
+            <a href="" ng-click="deleteParticipant(participant);" class="btn btn-danger"><i class="icon-trash icon-white"></i></a>
+          </div>
+          <div ng-show="survey.sent">
+            <span class="uneditable-input">{{participant.mobile}}</span>
+            <span class="uneditable-input" ng-show="{{participant.name}}">{{participant.name}}</span>
+            <span class="badge badge-success" id="{{participant.mobile}}">{{printResponse(participant.response)}}</span>
+          </div>
+        </li>
+    </ol>
+    <div class="input" ng-hide="survey.sent">
+      <input type="submit" value="Add Participant" class="btn btn-info" >
+    </div>
+    
+  </form>
+</div>
+    <form novalidate id="send-sms" ng-submit="sendSms()" ng-hide="survey.sent">
+      <div class="form-actions" ng-hide="isSendDisabled()">
+        <input type="submit" value="Send Survey" class="btn btn-primary btn-large" ng-disabled="isSendDisabled()">
+      </div>
+    </form>
+
+    <pre style="display: none">{{survey | json }}</pre>
+    </div>
+  </div>
+
+  <div id="footer" class="row">
+    <div class="span3">
+      <h3>Simp.le</h3>
+    </div>
+    
+    <div class="span3">
+      <h3>Do.ne</h3>
+    </div>
+
+    <div class="span3">
+      <h3>Fast.er</h3>
+    </div>
+
+  </div>
+
+
+</div>
+  <script src="/js/jquery-1.7.2.min.js"></script>
+  <script src="/js/underscore-min.js"></script>
+  <script src="/lib/angular/angular.js"></script>
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/js/bootstrap-datepicker.js"></script>
+  <script src="/js/controllers.js"></script>
+  <script>
+    $(function(){
+      $('#dp3').datepicker();
+    });
+  </script>
+</body>
+</html>
